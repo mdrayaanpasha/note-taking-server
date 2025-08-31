@@ -162,6 +162,8 @@ app.post("/api/auth/verify-otp", async (req, res) => {
 app.use("/api/notes",noteRouter);
 
 
-app.listen(4000, () => console.log("Server running on :4000"));
+if (process.env.NODE_ENV !== "production") {
+  app.listen(4000, () => console.log("Server running on :4000"));
+}
 
 export default app;
