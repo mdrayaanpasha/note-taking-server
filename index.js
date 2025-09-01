@@ -107,7 +107,7 @@ app.get(
 
       const token = jwt.sign({ userId: user.userId }, JWT_SECRET);
 
-      res.redirect(`http://localhost:5173/token?token=${token}`);
+      res.redirect(`https://nexus-notes-seven.vercel.app/token?token=${token}`);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Auth failed" });
