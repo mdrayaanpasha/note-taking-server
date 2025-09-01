@@ -1,6 +1,5 @@
 // routes/auth.route.js
 import express from "express";
-import passport from "../service/passport.js"; // your configured passport
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 import nodemailer from "nodemailer";
