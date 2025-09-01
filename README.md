@@ -1,6 +1,3 @@
-Here’s a professional, detailed `README.md` for your project based on the structure and features you’ve shared:
-
-
 # Nexus Notes Backend
 
 A full-stack backend API for a notes application with **Google OAuth** and **OTP authentication** using **Express**, **Prisma**, and **PostgreSQL**. Includes JWT-based authentication, note CRUD operations, and email-based OTP verification.
@@ -15,7 +12,6 @@ A full-stack backend API for a notes application with **Google OAuth** and **OTP
 - [Environment Variables](#environment-variables)  
 - [API Routes](#api-routes)  
 - [Notes](#notes)  
-- [License](#license)  
 
 ---
 
@@ -122,9 +118,5 @@ NODE_ENV=development
 
 ---
 
-## License
 
-If you want, I can also **add a “Quick Start with Postman” section and example requests/responses** to make this README more beginner-friendly and ready for testers.  
-
-Do you want me to do that?
 
