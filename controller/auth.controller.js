@@ -73,7 +73,7 @@ export const verifyOtp = async (req, res) => {
 export const googleCallback = async (req, res) => {
   try {
     const email = req.user.email;
-    const url = `http://localhost:5173/token?token=`;
+    const url = `https://syntaxia-2026.vercel.app/token?token=`;
 
     let user = await prisma.user.findUnique({ where: { userEmail: email } });
     if (!user) {
