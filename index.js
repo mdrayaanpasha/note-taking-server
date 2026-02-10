@@ -19,13 +19,14 @@ app.use(express.urlencoded({ extended: true }));
 
 const GOOGLE_CLIENT_ID = process.env.CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.CLIENT_SECRET;
+const GOOGLE_CALLBACK_URL = process.env.CALLBACK_URL
 const JWT_SECRET = process.env.JWT_SECRET || "secret123";
 
 passport.use(new GoogleStrategy(
   {
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: "/api/auth/google/callback"
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:4000/api/auth/google/callback"
   },
   (accessToken, refreshToken, profile, done) => {
     const user = { id: profile.id, email: profile.emails?.[0].value };
