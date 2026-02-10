@@ -73,6 +73,7 @@ export const verifyOtp = async (req, res) => {
 export const googleCallback = async (req, res) => {
   try {
     const email = req.user.email;
+    const url = `http://localhost:5173/token?token=`;
 
     let user = await prisma.user.findUnique({ where: { userEmail: email } });
     if (!user) {
@@ -80,7 +81,7 @@ export const googleCallback = async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.userId }, JWT_SECRET, { expiresIn: "1h" });
-    res.redirect(`https://nexus-notes-seven.vercel.app/token?token=${token}`);
+    res.redirect(`${url}${token}`);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Auth failed" });

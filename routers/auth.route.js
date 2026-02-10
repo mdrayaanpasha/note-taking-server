@@ -6,8 +6,8 @@ import { requestOtp, verifyOtp, googleCallback } from "../controller/auth.contro
 
 dotenv.config();
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_CLIENT_ID = process.env.CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 passport.use(new GoogleStrategy(
   {
