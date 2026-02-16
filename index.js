@@ -93,6 +93,37 @@ app.get("/all-events-info", async (req, res) => {
   }
 });
 
+app.get("/seed-events", async (req, res) => {
+  try {
+    const events = [
+      { eventId: "cmlgm1wy10001wpij8etyb11w", eventName: "BGMI", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10002wpij5m9w4zjl", eventName: "Valorant", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10003wpijxnoslqtr", eventName: "CTF", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10004wpij622cseeu", eventName: "IT Quiz", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10005wpijzyma7iiu", eventName: "Debugging & Coding", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10006wpijo6lm39g3", eventName: "Data Detective", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10007wpijl52gfwxj", eventName: "IPL Auction", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10008wpij9wkl7ggo", eventName: "Anime Quiz", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy10009wpij3ufrl65m", eventName: "Escape Room", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy1000awpijjbkedi4h", eventName: "Business Revival", createdAt: new Date("2026-02-10T13:02:18.889Z") },
+      { eventId: "cmlgm1wy1000bwpij0508s1t8", eventName: "Reel Making", createdAt: new Date("2026-02-10T13:02:18.889Z") }
+    ];
+
+    const result = await prisma.events.createMany({
+      data: events,
+      skipDuplicates: true // prevents crashing if already inserted
+    });
+
+    res.json({
+      success: true,
+      inserted: result.count
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to seed events" });
+  }
+});
+
 if (process.env.NODE_ENV !== "production") {
   app.listen(4000, () => console.log("Server running on :4000"));
 }

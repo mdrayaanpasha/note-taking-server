@@ -48,7 +48,183 @@ class UserController {
       return res.status(500).json({ message: "Internal server error" });
     }
   }
+ async checkPassStatus(req, res) {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
+      // Get type from params (e.g., /pass-check/BGMI)
+      const { type } = req.params;
+
+      // Normalize to uppercase to match Enum (bgmi -> BGMI)
+      const passType = type ? type.toUpperCase() : "";
+
+      // Validate Enum
+      const validTypes = ["BGMI", "VALO", "NON_GAMING"];
+      if (!validTypes.includes(passType)) {
+        return res.status(400).json({ message: "Invalid pass type provided" });
+      }
+
+      // Check DB
+      const existingPass = await prisma.pass.findFirst({
+        where: {
+          userId: userId,
+          type: passType
+        }
+      });
+
+      // Return boolean status
+      return res.status(200).json({
+        exists: !!existingPass, // true if found, false if null
+        pass: existingPass || null // Send the pass data if they need it (e.g., to show "Already Registered")
+      });
+
+    } catch (error) {
+      console.error("Check Pass Error:", error);
+      return res.status(500).json({ 
+        message: "Internal Server Error", 
+        error: error.message 
+      });
+    }
+  }
+
+async registerPass(req, res) {
+    try {
+      /*
+        Expected req.body (Multipart):
+        { 
+          type: "BGMI" | "VALO" | "NON_GAMING",
+          eventIdArray: JSON.stringify(["evt_id_1", "evt_id_2"]),
+          name: "Jane Doe",
+          college: "IIT",
+          phoneno: "9999999999",
+          course: "B.Tech",
+          avatar: "1",
+          txnId: asdsadsad"
+        }
+      */
+
+      const userId = req.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      // 1. Validate User Exists
+      const userExists = await prisma.user.findUnique({ where: { userId } });
+      if (!userExists) {
+        return res.status(404).json({ message: "User record not found. Please re-login." });
+      }
+
+      if (!req.file) return res.status(400).json({ message: "No payment proof provided" });
+
+      // 2. Parse & Validate Inputs
+      let { eventIdArray, type, name, college, phoneno, course, avatar, txnId } = req.body;
+
+      // Validate Pass Type
+      const validTypes = ["BGMI", "VALO", "NON_GAMING"];
+      if (!type || !validTypes.includes(type)) {
+        return res.status(400).json({ message: "Invalid or missing Pass Type" });
+      }
+
+      // Validate User Details
+      if (!name || !college || !phoneno || !course) {
+        return res.status(400).json({ message: "Missing required details: name, college, phoneno, course" });
+      }
+
+      // Parse Event Array
+      if (typeof eventIdArray === 'string') {
+        try {
+          eventIdArray = JSON.parse(eventIdArray);
+        } catch (e) {
+          return res.status(400).json({ message: "Invalid eventIdArray format" });
+        }
+      }
+
+      if (!Array.isArray(eventIdArray) || eventIdArray.length === 0) {
+        return res.status(400).json({ message: "At least one event ID is required" });
+      }
+
+      // 3. Upload to ImageKit
+      // We use the 'type' in the filename to easily organize storage
+      const uploadResult = await imagekit.upload({
+        file: req.file.buffer,
+        fileName: `${type.toLowerCase()}-pass-${userId}-${Date.now()}`,
+        folder: "/syntaxia-registrations",
+        useUniqueFileName: true,
+      });
+
+      if (!uploadResult?.url) throw new Error("Image upload failed");
+
+      // 4. Database Transaction
+      const result = await prisma.$transaction(async (tx) => {
+        
+        // A. Handle User Details (Create if missing, DO NOT overwrite)
+        const existingDetails = await tx.userDetails.findUnique({
+          where: { userId: userId }
+        });
+
+        let userDetails = existingDetails;
+
+        if (!existingDetails) {
+          userDetails = await tx.userDetails.create({
+            data: {
+              userId,
+              name,
+              college,
+              phoneno,
+              course,
+              avatar: avatar ? parseInt(avatar) : 1,
+            },
+          });
+        }
+
+        // B. Create the Pass
+        const newPass = await tx.pass.create({
+          data: {
+            userId: userId,
+            type: type, // Uses the Enum value passed from frontend
+            proof: uploadResult.url,
+            txnId: txnId
+          },
+        });
+
+        // C. Create Participations
+        const participationData = eventIdArray.map((eventId) => ({
+          userId: userId,
+          eventId: eventId,
+          passId: newPass.passId,
+        }));
+
+        const participations = await tx.participation.createMany({
+          data: participationData,
+          skipDuplicates: true,
+        });
+
+        return { 
+          pass: newPass, 
+          userDetails: userDetails, 
+          count: participations.count 
+        };
+      });
+
+      return res.status(201).json({
+        message: `${type} registration successful`,
+        data: result,
+      });
+
+    } catch (error) {
+      console.error("Pass Registration Error:", error);
+      
+      if (error.code === 'P2002') {
+        return res.status(409).json({ message: "Already registered for one or more selected events." });
+      }
+
+      return res.status(500).json({ 
+        message: "Internal Server Error", 
+        error: error.message 
+      });
+    }
+  }
   async registerEvent(req, res) {
     try {
       const userId = req.userId;
@@ -142,7 +318,7 @@ class UserController {
     }
   }
 
-  async getUserDetails(req, res) {
+async getUserDetails(req, res) {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -151,17 +327,42 @@ class UserController {
       
       const user = await prisma.user.findUnique({
         where: { userId },
-        include: { userDetails: true, participations: true },
+        include: { 
+          userDetails: true, 
+          // 1. Fetch all passes (BGMI, VALO, NON_GAMING)
+          passes: true, 
+          // 2. Fetch participations AND the actual Event details
+          participations: {
+            include: {
+              event: true // This gets eventName, etc.
+            }
+          } 
+        },
       });
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        
-        //exclude password from response
-        const { userPassword, ...userData } = user;
-        
-        return res.status(200).json({ user: userData });
+      if (!user) {
+          return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Exclude password
+      const { userPassword, ...userData } = user;
+      
+      // 3. Optional: Create a cleaner "registeredEvents" array for the frontend
+      // This makes it easier to map over events in your React component
+      const formattedEvents = user.participations.map((p) => ({
+        participationId: p.participationId,
+        eventId: p.eventId,
+        eventName: p.event.eventName, // Name from the relation
+        passId: p.passId
+      }));
+
+      return res.status(200).json({ 
+        user: {
+          ...userData,
+          registeredEvents: formattedEvents 
+        } 
+      });
+
     } catch (err) {
       console.error(err);
       return res.status(500).json({ message: "Internal server error" });

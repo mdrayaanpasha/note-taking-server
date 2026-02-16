@@ -12,6 +12,11 @@ const userRouter = Router();
 // Define user-related routes here (e.g., registration, login, profile management)
 
 userRouter.post("/details",tokenAuth, userController.insertUserDetails);
+userRouter.post("/v2/register",tokenAuth,upload.single("file"),userController.registerPass);
+
+userRouter.get("/pass-check/:type",tokenAuth,userController.checkPassStatus)
+
+
 userRouter.post("/register-event",tokenAuth, upload.single("file"), userController.registerEvent);
 userRouter.get("/",tokenAuth, userController.getUserDetails);
 

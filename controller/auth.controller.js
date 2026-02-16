@@ -80,7 +80,7 @@ export const googleCallback = async (req, res) => {
       user = await prisma.user.create({ data: { userEmail: email, userPassword: "" } });
     }
 
-    const token = jwt.sign({ userId: user.userId }, JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user.userId }, JWT_SECRET);
     res.redirect(`${url}${token}`);
   } catch (err) {
     console.error(err);
