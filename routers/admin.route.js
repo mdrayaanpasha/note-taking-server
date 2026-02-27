@@ -15,5 +15,7 @@ adminRouter.get("/search/txn/:txnId", adminController.searchByTxn);
 
 // Default list
 adminRouter.get("/", adminController.getPending);
+adminRouter.get("/colleges", adminController.getAllcolleges);
+adminRouter.get("/registrations-count", adminController.getEventRegistrationsCount);
 
 export default adminRouter;

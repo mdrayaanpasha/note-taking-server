@@ -99,6 +99,157 @@ class AdminController {
             return res.status(500).json({ message: "SEARCH_ERROR" });
         }
     };
+
+/*
+SCHEMA FOR REG:
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Define Enums outside the model
+enum PassType {
+  BGMI
+  VALO
+  NON_GAMING
+
+}
+
+model User {
+  userId        String        @id @default(cuid())
+  userEmail     String        @unique
+  userPassword  String
+  createdAt     DateTime      @default(now())
+
+  userDetails   UserDetails?
+  participations Participation[]
+  passes        Pass[] // Added relation link
+}
+
+model Pass {
+  passId  String   @id @default(cuid())
+  userId  String 
+  type    PassType // Use the defined Enum
+  proof   String
+  status Boolean @default(false)
+  txnId String
+
+
+  user    User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  participations Participation[] // Added relation link
+}
+
+model Participation {
+  participationId String  @id @default(cuid())
+  eventId         String
+  passId String?
+
+  userId          String
+
+  user            User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  event           Events  @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+pass Pass? @relation(fields: [passId], references: [passId], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+model UserDetails {
+  userId   String  @id
+  name     String
+  college  String
+  phoneno    String
+  course   String
+  avatar   Int     @default(1)
+
+  user     User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+model Events { 
+  eventId       String        @id @default(cuid())
+  eventName     String
+  createdAt     DateTime      @default(now())
+
+  participations Participation[]
+
+  @@map("events")
+
+}
+
+*/
+ getAllcolleges = async (req, res) => {
+    if (!this.#isAuthenticated(req)) {
+        return res.status(401).json({ message: "UNAUTHORIZED" });
+    }
+
+    try {
+        const colleges = await prisma.userDetails.findMany({
+            select: { college: true }
+        });
+
+        const normalizeCollege = (name) => {
+            if (!name) return "";
+
+            return name
+                .toLowerCase()
+                .replace(/,/g, "")
+                .replace(/\b(deemed to be|campus|inst|institute|of technology|clg)\b/g, "")
+                .replace(/\bypr\b/g, "yeshwanthpur")
+                .replace(/\s+/g, " ")
+                .trim();
+        };
+
+        const map = new Map();
+
+        for (const entry of colleges) {
+            const original = entry.college;
+            const normalized = normalizeCollege(original);
+
+            // Use first 2 meaningful words as base key
+            const baseKey = normalized.split(" ").slice(0, 2).join(" ");
+
+            if (!map.has(baseKey)) {
+                map.set(baseKey, original);
+            }
+        }
+
+        return res.status(200).json([...map.values()]);
+
+    } catch (error) {
+        return res.status(500).json({ error, message: "COLLEGES_ERROR" });
+    }
+};
+
+
+
+    getEventRegistrationsCount = async (req, res) => {
+        if (!this.#isAuthenticated(req)) return res.status(401).json({ message: "UNAUTHORIZED" });  
+        try {
+            const counts = await prisma.events.findMany({
+                include: {
+                    participations: {
+                        include: {
+                            pass: true
+                        }
+                    }
+                }
+            });
+
+            const result = counts.map(event => ({
+                eventId: event.eventId,
+                eventName: event.eventName,
+                registrationCount: event.participations.filter(p => p.pass.status).length
+            }));
+
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: "COUNT_ERROR" });
+        }
+    }
 }
 
 export default new AdminController();
