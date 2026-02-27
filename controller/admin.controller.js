@@ -225,6 +225,28 @@ model Events {
 };
 
 
+    getRegistrationsForSpecifiedEventWithUserDetails = async (req, res) => {
+        if (!this.#isAuthenticated(req)) return res.status(401).json({ message: "UNAUTHORIZED" });
+        const eventId = req.body.eventId;
+
+        try {
+            const events = await prisma.events.findUnique({
+                where: { eventId },
+                include: {
+                    participations: {
+                        include: {
+                            user: { include: { userDetails: true } },
+                            pass: true
+                        }
+                    }
+                }
+            });
+            return res.status(200).json(events);
+        } catch (error) {
+            return res.status(500).json({ message: "REGISTRATIONS_ERROR" });
+        }
+    }
+
 
     getEventRegistrationsCount = async (req, res) => {
         if (!this.#isAuthenticated(req)) return res.status(401).json({ message: "UNAUTHORIZED" });  
